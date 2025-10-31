@@ -1,4 +1,3 @@
-# delete_posts_generic.py
 # Cross-platform, Ctrl+C to stop. Interactive setup with auto-detected username.
 # Processes Imgur posts (Public + Hidden) in visual order (top-left first).
 
@@ -305,7 +304,7 @@ def interactive_setup():
     if not dry_run:
         print(f"\n{RED}{BOLD}⚠️  WARNING: DELETION MODE ENABLED ⚠️{RESET}")
         print(f"{RED}This will PERMANENTLY DELETE your posts!{RESET}\n")
-        confirm_del = prompt_yes_no(f"{RED}Are you SURE you want to proceed with REAL deletions?", default=False)
+        confirm_del = prompt_yes_no(f"{RED}Are you SURE you want to proceed with REAL deletions?", default=True)
         if not confirm_del:
             print(f"{YEL}Switching to DRY RUN mode for safety.{RESET}\n")
             dry_run = True
@@ -370,7 +369,7 @@ def polite_sleep(sec: float):
     time.sleep(sec)
 
 # Default config values (used if not running interactively)
-SETTLE_DELAY = 0.8        # seconds to let SPA settle after nav
+SETTLE_DELAY = 0.4        # seconds to let SPA settle after nav
 
 def safe_goto(page, url, timeout_ms=30000):
     """Navigate robustly without relying on 'networkidle' (SPAs rarely idle)."""
@@ -405,7 +404,7 @@ def select_all_tab(page):
 def go_to_posts_all(page, username):
     safe_goto(page, get_posts_url(username))
     select_all_tab(page)
-    polite_sleep(0.7)
+    polite_sleep(0.4)
 
 def scroll_to_top(page):
     page.evaluate("() => window.scrollTo(0, 0)")
@@ -475,7 +474,7 @@ def delete_post_container(page, dry_run):
     Delete a post/album container by clicking "Delete post" button.
     Returns True if deletion was initiated, False otherwise.
     """
-    polite_sleep(1.0)  # Wait for page to settle
+    polite_sleep(0.5)  # Wait for page to settle
     
     delete_post_clicked = False
     
@@ -561,7 +560,7 @@ def delete_one(page, href, dry_run, username=None):
     """
     url = "https://imgur.com" + href
     safe_goto(page, url, timeout_ms=20000)
-    polite_sleep(1.5)  # Give page more time to fully load
+    polite_sleep(0.8)  # Give page time to fully load
 
     # Determine if this is an image (single) or post/album
     # Albums: /a/xxxxx or /gallery/xxxxx
@@ -594,14 +593,14 @@ def delete_one(page, href, dry_run, username=None):
                 try:
                     delete_btn.click(timeout=3000)
                     print(f" [DRY-RUN] {GRN}✓ Clicked 'Delete image' button (opened modal){RESET}")
-                    polite_sleep(1.0)  # Brief wait for modal to appear
+                    polite_sleep(0.6)  # Brief wait for modal to appear
                 except Exception as e:
                     print(f" [DRY-RUN] {YEL}⚠ Could not click 'Delete image' button: {e}{RESET}")
                     return False, 0
             else:
                 if safe_click(page, delete_btn, "'Delete image' button", dry_run):
                     print(f" {GRN}✓ Clicked 'Delete image' button{RESET}")
-                    polite_sleep(1.0)  # Brief wait for modal to appear
+                    polite_sleep(0.6)  # Brief wait for modal to appear
                 else:
                     print(f" {YEL}⚠ Could not click 'Delete image' button{RESET}")
                     return False, 0
@@ -615,7 +614,7 @@ def delete_one(page, href, dry_run, username=None):
         # Step 2: In dry-run, click Cancel; otherwise click "Yes, Delete It"
         if dry_run:
             # In dry-run mode, click Cancel to close the modal without deleting
-            polite_sleep(1.0)  # Wait for modal to appear
+            polite_sleep(0.6)  # Wait for modal to appear
             cancel_clicked = False
             cancel_selectors = [
                 'button:has-text("Cancel")',
@@ -633,7 +632,7 @@ def delete_one(page, href, dry_run, username=None):
                         # In dry-run, actually click Cancel to close modal
                         cancel_btn.click(timeout=2000)
                         print(f" [DRY-RUN] {GRN}✓ Clicked 'Cancel' - modal closed (simulated deletion){RESET}")
-                        polite_sleep(0.5)
+                        polite_sleep(0.3)
                         cancel_clicked = True
                         break
                 except Exception:
@@ -647,14 +646,14 @@ def delete_one(page, href, dry_run, username=None):
                         # In dry-run, actually click Cancel to close modal
                         cancel_btn.click(timeout=2000)
                         print(f" [DRY-RUN] {GRN}✓ Clicked 'Cancel' - modal closed (simulated deletion){RESET}")
-                        polite_sleep(0.5)
+                        polite_sleep(0.3)
                         cancel_clicked = True
                 except Exception:
                     pass
             
             if not cancel_clicked:
                 print(f" [DRY-RUN] {YEL}⚠ Could not find 'Cancel' button - modal may close on its own{RESET}")
-                polite_sleep(0.5)
+                polite_sleep(0.3)
             
             # Return success since we simulated the deletion flow
             return True, 1
@@ -668,7 +667,7 @@ def delete_one(page, href, dry_run, username=None):
                 
                 if safe_click(page, confirm_btn, "'Yes, Delete It' button", dry_run):
                     print(f" {GRN}✓ Clicked 'Yes, Delete It' - deleting image{RESET}")
-                    polite_sleep(0.5)  # Brief wait for click to register
+                    polite_sleep(0.3)  # Brief wait for click to register
                 else:
                     print(f" {YEL}⚠ Could not click 'Yes, Delete It' button{RESET}")
                     return False, 0
@@ -682,7 +681,7 @@ def delete_one(page, href, dry_run, username=None):
     elif is_album:
         # For albums: Delete the post container (ungroup the album)
         # This only deletes the post grouping - it does NOT delete individual images
-        polite_sleep(2.0)  # Let album page fully load
+        polite_sleep(1.2)  # Let album page fully load
         
         print(f" {BLU}Analyzing album page: {page.url}{RESET}")
         
@@ -1001,7 +1000,7 @@ def main():
                             processed += 1  # Count attempt even if failed
                             print(f" -> {YEL}Failed{RESET} (total attempts: {processed})")
 
-                        polite_sleep(0.5)
+                        polite_sleep(0.3)
 
                         # Always return to grid and ensure All tab; go back to top for stable order
                         go_to_posts_all(page, username)
@@ -1017,7 +1016,7 @@ def main():
                         break
                     seen_heights.add(last_h)
                     page.evaluate("() => window.scrollTo(0, document.body.scrollHeight)")
-                    polite_sleep(1.0)
+                    polite_sleep(0.6)
 
                 print(f"\n{GRN}✅ Done. {'Simulated' if dry_run else 'Actual'} items processed: {processed}{RESET}")
 
