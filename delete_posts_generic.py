@@ -502,11 +502,13 @@ def delete_post_container(page, dry_run):
         try:
             delete_post_btn = page.locator(selector).first
             if safe_click(page, delete_post_btn, f"'Delete post' button ({selector})", dry_run):
-                if not dry_run:
+                if dry_run:
+                    print(f" [DRY-RUN] {GRN}✓ Found and clicked 'Delete post' button{RESET}")
+                else:
                     print(f" {GRN}✓ Found and clicked 'Delete post' button{RESET}")
-                    polite_sleep(1.0)
-                    delete_post_clicked = True
-                    break
+                polite_sleep(1.0)
+                delete_post_clicked = True
+                break
         except Exception:
             continue
     
@@ -515,10 +517,12 @@ def delete_post_container(page, dry_run):
         try:
             delete_post_btn = page.get_by_role("button", name=re.compile("Delete post", re.I)).first
             if safe_click(page, delete_post_btn, "'Delete post' button (role-based)", dry_run):
-                if not dry_run:
+                if dry_run:
+                    print(f" [DRY-RUN] {GRN}✓ Found and clicked 'Delete post' button (role-based){RESET}")
+                else:
                     print(f" {GRN}✓ Found and clicked 'Delete post' button (role-based){RESET}")
-                    polite_sleep(1.0)
-                    delete_post_clicked = True
+                polite_sleep(1.0)
+                delete_post_clicked = True
         except Exception:
             pass
     
@@ -544,7 +548,9 @@ def delete_post_container(page, dry_run):
                 
                 if safe_click(page, btn, f"'{args[0]}' button in modal", dry_run):
                     confirmation_clicked = True
-                    if not dry_run:
+                    if dry_run:
+                        print(f" [DRY-RUN] {GRN}✓ Deleted post/album{RESET}")
+                    else:
                         print(f" {GRN}✓ Deleted post/album{RESET}")
                     polite_sleep(1.0)
                     break
@@ -586,43 +592,98 @@ def delete_one(page, href, dry_run, username=None):
         try:
             delete_btn = page.get_by_role("button", name="Delete image").first
             if not delete_btn.is_visible(timeout=3000):
-                if not dry_run:
+                if dry_run:
+                    print(f" [DRY-RUN] {YEL}⚠ 'Delete image' button not visible{RESET}")
+                else:
                     print(f" {YEL}⚠ 'Delete image' button not visible{RESET}")
                 return False, 0
             
-            if safe_click(page, delete_btn, "'Delete image' button", dry_run):
-                if not dry_run:
-                    print(f" {GRN}✓ Clicked 'Delete image' button{RESET}")
-                polite_sleep(1.0)  # Brief wait for modal to appear
+            if dry_run:
+                # In dry-run, actually click to open modal
+                try:
+                    delete_btn.click(timeout=3000)
+                    print(f" [DRY-RUN] {GRN}✓ Clicked 'Delete image' button (opened modal){RESET}")
+                    polite_sleep(1.0)  # Brief wait for modal to appear
+                except Exception as e:
+                    print(f" [DRY-RUN] {YEL}⚠ Could not click 'Delete image' button: {e}{RESET}")
+                    return False, 0
             else:
-                if not dry_run:
+                if safe_click(page, delete_btn, "'Delete image' button", dry_run):
+                    print(f" {GRN}✓ Clicked 'Delete image' button{RESET}")
+                    polite_sleep(1.0)  # Brief wait for modal to appear
+                else:
                     print(f" {YEL}⚠ Could not click 'Delete image' button{RESET}")
-                return False, 0
+                    return False, 0
         except Exception as e:
-            if not dry_run:
+            if dry_run:
+                print(f" [DRY-RUN] {YEL}⚠ Could not find 'Delete image' button: {e}{RESET}")
+            else:
                 print(f" {YEL}⚠ Could not find 'Delete image' button: {e}{RESET}")
             return False, 0
         
-        # Step 2: Click "Yes, Delete It" button (role-based, as per codegen)
-        try:
-            confirm_btn = page.get_by_role("button", name="Yes, Delete It").first
-            if not confirm_btn.is_visible(timeout=3000):
-                if not dry_run:
-                    print(f" {YEL}⚠ 'Yes, Delete It' button not visible{RESET}")
-                return False, 0
+        # Step 2: In dry-run, click Cancel; otherwise click "Yes, Delete It"
+        if dry_run:
+            # In dry-run mode, click Cancel to close the modal without deleting
+            polite_sleep(1.0)  # Wait for modal to appear
+            cancel_clicked = False
+            cancel_selectors = [
+                'button:has-text("Cancel")',
+                'text="Cancel"',
+                '[role="button"]:has-text("Cancel")',
+                'button[aria-label*="Cancel" i]',
+                'button:has-text("Close")',
+                '[role="dialog"] button:has-text("Cancel")',
+            ]
             
-            if safe_click(page, confirm_btn, "'Yes, Delete It' button", dry_run):
-                if not dry_run:
+            for selector in cancel_selectors:
+                try:
+                    cancel_btn = page.locator(selector).first
+                    if cancel_btn.is_visible(timeout=2000):
+                        # In dry-run, actually click Cancel to close modal
+                        cancel_btn.click(timeout=2000)
+                        print(f" [DRY-RUN] {GRN}✓ Clicked 'Cancel' - modal closed (simulated deletion){RESET}")
+                        polite_sleep(0.5)
+                        cancel_clicked = True
+                        break
+                except Exception:
+                    continue
+            
+            # Also try role-based
+            if not cancel_clicked:
+                try:
+                    cancel_btn = page.get_by_role("button", name=re.compile("Cancel", re.I)).first
+                    if cancel_btn.is_visible(timeout=2000):
+                        # In dry-run, actually click Cancel to close modal
+                        cancel_btn.click(timeout=2000)
+                        print(f" [DRY-RUN] {GRN}✓ Clicked 'Cancel' - modal closed (simulated deletion){RESET}")
+                        polite_sleep(0.5)
+                        cancel_clicked = True
+                except Exception:
+                    pass
+            
+            if not cancel_clicked:
+                print(f" [DRY-RUN] {YEL}⚠ Could not find 'Cancel' button - modal may close on its own{RESET}")
+                polite_sleep(0.5)
+            
+            # Return success since we simulated the deletion flow
+            return True, 1
+        else:
+            # Live mode: Click "Yes, Delete It" button
+            try:
+                confirm_btn = page.get_by_role("button", name="Yes, Delete It").first
+                if not confirm_btn.is_visible(timeout=3000):
+                    print(f" {YEL}⚠ 'Yes, Delete It' button not visible{RESET}")
+                    return False, 0
+                
+                if safe_click(page, confirm_btn, "'Yes, Delete It' button", dry_run):
                     print(f" {GRN}✓ Clicked 'Yes, Delete It' - deleting image{RESET}")
-                polite_sleep(0.5)  # Brief wait for click to register
-            else:
-                if not dry_run:
+                    polite_sleep(0.5)  # Brief wait for click to register
+                else:
                     print(f" {YEL}⚠ Could not click 'Yes, Delete It' button{RESET}")
-                return False, 0
-        except Exception as e:
-            if not dry_run:
+                    return False, 0
+            except Exception as e:
                 print(f" {YEL}⚠ Could not find 'Yes, Delete It' button: {e}{RESET}")
-            return False, 0
+                return False, 0
         
         # Deletion initiated - main loop will navigate back to /posts
         return True, 1
@@ -654,7 +715,9 @@ def delete_one(page, href, dry_run, username=None):
             # IMPORTANT: We return True, 0 because:
             # - True: Post container deletion (ungrouping) succeeded
             # - 0: No images were deleted (only the post grouping was removed)
-            if not dry_run:
+            if dry_run:
+                print(f" [DRY-RUN] {BLU}✓ Album post deleted (ungrouped){RESET}")
+            else:
                 print(f" {BLU}✓ Album post deleted (ungrouped){RESET}")
             return True, 0
         else:
@@ -753,7 +816,9 @@ def delete_one(page, href, dry_run, username=None):
                 try:
                     delete_account_btn = page.locator(selector).first
                     if safe_click(page, delete_account_btn, f"'Delete from account' button ({selector})", dry_run):
-                        if not dry_run:
+                        if dry_run:
+                            print(f" [DRY-RUN] {GRN}✓ Clicking 'Delete from account'{RESET}")
+                        else:
                             print(f" {GRN}✓ Clicking 'Delete from account'{RESET}")
                         polite_sleep(1.0)
                         deleted = True
@@ -765,7 +830,9 @@ def delete_one(page, href, dry_run, username=None):
                 try:
                     delete_account_btn = page.get_by_role("button", name=re.compile("Delete from account", re.I)).first
                     if safe_click(page, delete_account_btn, "'Delete from account' button (role regex)", dry_run):
-                        if not dry_run:
+                        if dry_run:
+                            print(f" [DRY-RUN] {GRN}✓ Clicking 'Delete from account' via role{RESET}")
+                        else:
                             print(f" {GRN}✓ Clicking 'Delete from account' via role{RESET}")
                         polite_sleep(1.0)
                         deleted = True
