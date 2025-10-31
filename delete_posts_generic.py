@@ -953,15 +953,15 @@ def main():
             raise SystemExit(f"{RED}Missing {storage_file}. Run your login script first.{RESET}")
 
         with sync_playwright() as p:
-            # Add stealth-like args to reduce detection in headless mode
-            launch_args = {}
+            # Add stealth-like args to reduce detection (apply to both headless and headful)
+            launch_args = {
+                "args": [
+                    "--disable-blink-features=AutomationControlled",
+                ]
+            }
+            # Add headless-specific args
             if headless:
-                launch_args = {
-                    "args": [
-                        "--disable-blink-features=AutomationControlled",
-                        "--disable-dev-shm-usage",
-                    ]
-                }
+                launch_args["args"].append("--disable-dev-shm-usage")
             browser = p.chromium.launch(headless=headless, **launch_args)
             
             # Set a more realistic viewport and user agent
