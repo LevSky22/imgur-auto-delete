@@ -326,16 +326,7 @@ def interactive_setup():
     headless_prompt = f"{BLU}Run in headless mode? (no browser window)"
     if dry_run:
         headless_prompt += f" {GRN}[recommended for dry runs]{RESET}"
-    else:
-        headless_prompt += f" {YEL}[slightly higher detection risk]{RESET}"
     headless = prompt_yes_no(headless_prompt, default=headless_default)
-    
-    # Warn about headless + real deletions
-    if not dry_run and headless:
-        print(f"\n{YEL}⚠️  Note: Headless mode for real deletions has slightly higher detection risk.{RESET}")
-        print(f"{YEL}   Consider using visible mode (headless=False) for safety on first few runs.{RESET}")
-        if not prompt_yes_no(f"{YEL}Continue with headless mode?", default=True):
-            headless = False
     
     print(f"\n{BOLD}{GRN}✓ Configuration complete!{RESET}\n")
     print(f"{BOLD}Summary:{RESET}")
