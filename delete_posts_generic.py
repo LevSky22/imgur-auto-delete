@@ -479,79 +479,6 @@ def safe_click(page, locator, description="element", dry_run=False, timeout=2000
         pass
     return False
 
-def safe_click_js(page, locator, description="element", dry_run=False):
-    """
-    Conditionally click an element using JavaScript - only clicks if not in dry_run mode.
-    Returns True if clicked (or would click in dry-run), False otherwise.
-    """
-    try:
-        if dry_run:
-            print(f" [DRY-RUN] Would click {description} (via JS)")
-            return True
-        else:
-            locator.evaluate("el => el.click()")
-            return True
-    except Exception:
-        pass
-    return False
-
-def find_and_hover_image_container(page, dry_run):
-    """
-    Find the image container and hover over it to reveal the three dots menu.
-    Returns the image container locator if found, None otherwise.
-    """
-    image_container = None
-    try:
-        # Try finding the actual image element first
-        try:
-            image_container = page.locator('img[src*="imgur"]').first
-            if not image_container.is_visible(timeout=500):
-                image_container = None
-        except Exception:
-            image_container = None
-        
-        # If no image found, try to find container by finding parent of three dots location
-        if not image_container:
-            try:
-                # The three dots are usually in a container with the image
-                # Try finding containers that might contain images
-                containers = page.locator('[class*="Image"], [class*="image"], [class*="Post-content"], [class*="post-content"]').first
-                if containers.is_visible(timeout=500):
-                    image_container = containers
-            except Exception:
-                pass
-        
-        # Last resort: try finding by image grid items
-        if not image_container:
-            try:
-                # Look for grid items that contain images
-                grid_items = page.locator('[class*="grid"], [class*="Grid"], [class*="item"]').first
-                if grid_items.is_visible(timeout=500):
-                    image_container = grid_items
-            except Exception:
-                pass
-    except Exception:
-        pass
-    
-    # Hover over the image container to make three dots visible
-    if image_container:
-        try:
-            if not dry_run:
-                # Scroll into view first to handle window movement, then hover
-                image_container.scroll_into_view_if_needed(timeout=2000)
-                polite_sleep(0.5)  # Wait a bit before hover to ensure scroll completes
-                image_container.hover(timeout=2000)
-                polite_sleep(1.0)  # Wait for hover effect to reveal three dots
-            else:
-                print(f" [DRY-RUN] Would hover over image to reveal three dots menu")
-            return image_container
-        except Exception as e:
-            if not dry_run:
-                print(f" {YEL}⚠ Could not hover: {e} (will try clicking anyway){RESET}")
-            return image_container  # Return container even if hover failed
-    
-    return None
-
 def delete_post_container(page, dry_run):
     """
     Delete a post/album container by clicking "Delete post" button.
@@ -633,7 +560,7 @@ def delete_one(page, href, dry_run, username=None):
     Delete an image or post from Imgur.
     Returns: (success: bool, images_deleted: int)
     For single images: returns (True, 1) or (False, 0)
-    For albums: returns (True, N) where N is number of images deleted, or (False, 0)
+    For albums: returns (True, 0) when post is ungrouped (no images deleted), or (False, 0) on failure
     """
     url = "https://imgur.com" + href
     safe_goto(page, url, timeout_ms=20000)
@@ -701,9 +628,8 @@ def delete_one(page, href, dry_run, username=None):
         return True, 1
     
     elif is_album:
-        # For albums: Delete the post container to ungroup it
-        # This makes images appear as individual posts on the posts page
-        # The main loop will then process each image individually
+        # For albums: Delete the post container (ungroup the album)
+        # This only deletes the post grouping - it does NOT delete individual images
         polite_sleep(2.0)  # Let album page fully load
         
         print(f" {BLU}Analyzing album page: {page.url}{RESET}")
@@ -714,23 +640,22 @@ def delete_one(page, href, dry_run, username=None):
             three_dots_all = page.locator('text="..."').all()
             detected_image_count = len(three_dots_all)
             if detected_image_count > 0:
-                print(f" {BLU}Album contains {detected_image_count} image(s) - ungrouping...{RESET}")
+                print(f" {BLU}Album contains {detected_image_count} image(s) - deleting post container...{RESET}")
                 image_count = detected_image_count
         except Exception:
             pass
         
         # Delete the post container - this ungroups the album
-        # Images will appear as individual posts on the posts page
+        # The images themselves are not deleted, only the post/album grouping
         print(f" {BLU}Deleting post container to ungroup album...{RESET}")
         deleted = delete_post_container(page, dry_run)
         
         if deleted:
             # IMPORTANT: We return True, 0 because:
-            # - True: Ungrouping succeeded
-            # - 0: No images were deleted (they're just ungrouped, still exist as individual posts)
-            # The main loop will then process each individual image and delete them
+            # - True: Post container deletion (ungrouping) succeeded
+            # - 0: No images were deleted (only the post grouping was removed)
             if not dry_run:
-                print(f" {BLU}✓ Album ungrouped - images will be processed individually{RESET}")
+                print(f" {BLU}✓ Album post deleted (ungrouped){RESET}")
             return True, 0
         else:
             print(f" {YEL}⚠ Could not ungroup album/post container{RESET}")
@@ -1004,8 +929,16 @@ def main():
                         print(f"Processing {href} at ({int(x)},{int(y)}) ...")
                         ok, images_count = delete_one(page, href, dry_run, username)
                         if ok:
-                            processed += images_count  # Add actual number of images deleted
-                            print(f" -> {'Simulated' if dry_run else (GRN + 'Deleted' + RESET)} {images_count} image(s) (total: {processed})")
+                            # Albums (images_count == 0) count as 1 item processed
+                            if images_count == 0:
+                                processed += 1
+                                print(f" -> {'Simulated' if dry_run else (GRN + 'Deleted' + RESET)} post (total: {processed})")
+                            else:
+                                processed += images_count  # Add actual number of images deleted
+                                if images_count == 1:
+                                    print(f" -> {'Simulated' if dry_run else (GRN + 'Deleted' + RESET)} image (total: {processed})")
+                                else:
+                                    print(f" -> {'Simulated' if dry_run else (GRN + 'Deleted' + RESET)} {images_count} image(s) (total: {processed})")
                         else:
                             processed += 1  # Count attempt even if failed
                             print(f" -> {YEL}Failed{RESET} (total attempts: {processed})")
