@@ -369,7 +369,7 @@ def polite_sleep(sec: float):
     time.sleep(sec)
 
 # Default config values (used if not running interactively)
-SETTLE_DELAY = 0.4        # seconds to let SPA settle after nav
+SETTLE_DELAY = 0.3        # seconds to let SPA settle after nav
 
 def safe_goto(page, url, timeout_ms=30000):
     """Navigate robustly without relying on 'networkidle' (SPAs rarely idle)."""
@@ -386,7 +386,7 @@ def select_all_tab(page):
         tab = page.get_by_role("tab", name=re.compile(r"^\s*all\s*$", re.I)).first
         if tab and tab.is_visible():
             tab.click(timeout=1500)
-            polite_sleep(0.5)
+            polite_sleep(0.3)
             return
     except Exception:
         pass
@@ -396,7 +396,7 @@ def select_all_tab(page):
             el = page.locator(sel).first
             if el and el.is_visible():
                 el.click(timeout=1500)
-                polite_sleep(0.5)
+                polite_sleep(0.2)
                 return
         except Exception:
             pass
@@ -404,7 +404,7 @@ def select_all_tab(page):
 def go_to_posts_all(page, username):
     safe_goto(page, get_posts_url(username))
     select_all_tab(page)
-    polite_sleep(0.4)
+    polite_sleep(0.6)  # Give grid time to populate
 
 def scroll_to_top(page):
     page.evaluate("() => window.scrollTo(0, 0)")
@@ -474,7 +474,7 @@ def delete_post_container(page, dry_run):
     Delete a post/album container by clicking "Delete post" button.
     Returns True if deletion was initiated, False otherwise.
     """
-    polite_sleep(0.5)  # Wait for page to settle
+    polite_sleep(0.2)  # Wait for page to settle
     
     delete_post_clicked = False
     
@@ -496,7 +496,7 @@ def delete_post_container(page, dry_run):
                     print(f" [DRY-RUN] {GRN}✓ Found and clicked 'Delete post' button{RESET}")
                 else:
                     print(f" {GRN}✓ Found and clicked 'Delete post' button{RESET}")
-                polite_sleep(1.0)
+                polite_sleep(0.2)
                 delete_post_clicked = True
                 break
         except Exception:
@@ -511,14 +511,14 @@ def delete_post_container(page, dry_run):
                     print(f" [DRY-RUN] {GRN}✓ Found and clicked 'Delete post' button (role-based){RESET}")
                 else:
                     print(f" {GRN}✓ Found and clicked 'Delete post' button (role-based){RESET}")
-                polite_sleep(1.0)
+                polite_sleep(0.2)
                 delete_post_clicked = True
         except Exception:
             pass
     
     if delete_post_clicked:
         # Wait for modal to appear
-        polite_sleep(1.5)
+        polite_sleep(0.4)
         
         # Look for confirmation button in modal
         confirmation_clicked = False
@@ -542,7 +542,7 @@ def delete_post_container(page, dry_run):
                         print(f" [DRY-RUN] {GRN}✓ Deleted post/album{RESET}")
                     else:
                         print(f" {GRN}✓ Deleted post/album{RESET}")
-                    polite_sleep(1.0)
+                    polite_sleep(0.2)
                     break
             except Exception:
                 continue
@@ -560,7 +560,7 @@ def delete_one(page, href, dry_run, username=None):
     """
     url = "https://imgur.com" + href
     safe_goto(page, url, timeout_ms=20000)
-    polite_sleep(0.8)  # Give page time to fully load
+    polite_sleep(0.3)  # Give page time to fully load
 
     # Determine if this is an image (single) or post/album
     # Albums: /a/xxxxx or /gallery/xxxxx
@@ -593,14 +593,14 @@ def delete_one(page, href, dry_run, username=None):
                 try:
                     delete_btn.click(timeout=3000)
                     print(f" [DRY-RUN] {GRN}✓ Clicked 'Delete image' button (opened modal){RESET}")
-                    polite_sleep(0.6)  # Brief wait for modal to appear
+                    polite_sleep(0.2)  # Brief wait for modal to appear
                 except Exception as e:
                     print(f" [DRY-RUN] {YEL}⚠ Could not click 'Delete image' button: {e}{RESET}")
                     return False, 0
             else:
                 if safe_click(page, delete_btn, "'Delete image' button", dry_run):
                     print(f" {GRN}✓ Clicked 'Delete image' button{RESET}")
-                    polite_sleep(0.6)  # Brief wait for modal to appear
+                    polite_sleep(0.2)  # Brief wait for modal to appear
                 else:
                     print(f" {YEL}⚠ Could not click 'Delete image' button{RESET}")
                     return False, 0
@@ -614,7 +614,7 @@ def delete_one(page, href, dry_run, username=None):
         # Step 2: In dry-run, click Cancel; otherwise click "Yes, Delete It"
         if dry_run:
             # In dry-run mode, click Cancel to close the modal without deleting
-            polite_sleep(0.6)  # Wait for modal to appear
+            polite_sleep(0.3)  # Wait for modal to appear
             cancel_clicked = False
             cancel_selectors = [
                 'button:has-text("Cancel")',
@@ -632,7 +632,7 @@ def delete_one(page, href, dry_run, username=None):
                         # In dry-run, actually click Cancel to close modal
                         cancel_btn.click(timeout=2000)
                         print(f" [DRY-RUN] {GRN}✓ Clicked 'Cancel' - modal closed (simulated deletion){RESET}")
-                        polite_sleep(0.3)
+                        polite_sleep(0.1)
                         cancel_clicked = True
                         break
                 except Exception:
@@ -646,14 +646,14 @@ def delete_one(page, href, dry_run, username=None):
                         # In dry-run, actually click Cancel to close modal
                         cancel_btn.click(timeout=2000)
                         print(f" [DRY-RUN] {GRN}✓ Clicked 'Cancel' - modal closed (simulated deletion){RESET}")
-                        polite_sleep(0.3)
+                        polite_sleep(0.1)
                         cancel_clicked = True
                 except Exception:
                     pass
             
             if not cancel_clicked:
                 print(f" [DRY-RUN] {YEL}⚠ Could not find 'Cancel' button - modal may close on its own{RESET}")
-                polite_sleep(0.3)
+                polite_sleep(0.2)
             
             # Return success since we simulated the deletion flow
             return True, 1
@@ -667,7 +667,7 @@ def delete_one(page, href, dry_run, username=None):
                 
                 if safe_click(page, confirm_btn, "'Yes, Delete It' button", dry_run):
                     print(f" {GRN}✓ Clicked 'Yes, Delete It' - deleting image{RESET}")
-                    polite_sleep(0.3)  # Brief wait for click to register
+                    polite_sleep(0.2)  # Brief wait for click to register
                 else:
                     print(f" {YEL}⚠ Could not click 'Yes, Delete It' button{RESET}")
                     return False, 0
@@ -681,7 +681,7 @@ def delete_one(page, href, dry_run, username=None):
     elif is_album:
         # For albums: Delete the post container (ungroup the album)
         # This only deletes the post grouping - it does NOT delete individual images
-        polite_sleep(1.2)  # Let album page fully load
+        polite_sleep(0.4)  # Let album page fully load
         
         print(f" {BLU}Analyzing album page: {page.url}{RESET}")
         
@@ -734,7 +734,7 @@ def delete_one(page, href, dry_run, username=None):
             try:
                 btn = page.locator(selector).first
                 if safe_click(page, btn, f"three dots menu ({selector})", dry_run, timeout=1500):
-                    polite_sleep(0.8)
+                    polite_sleep(0.3)
                     three_dots_clicked = True
                     break
             except Exception:
@@ -748,7 +748,7 @@ def delete_one(page, href, dry_run, username=None):
                         aria_label = btn.get_attribute("aria-label") or ""
                         if "more" in aria_label.lower() or "menu" in aria_label.lower() or "options" in aria_label.lower():
                             if safe_click(page, btn, "three dots menu (button scan)", dry_run, timeout=500):
-                                polite_sleep(0.8)
+                                polite_sleep(0.3)
                                 three_dots_clicked = True
                                 break
                     except Exception:
@@ -772,7 +772,7 @@ def delete_one(page, href, dry_run, username=None):
                 try:
                     delete_btn = page.locator(selector).first
                     if safe_click(page, delete_btn, f"'Delete image' button ({selector})", dry_run, timeout=1500):
-                        polite_sleep(1.0)  # Wait for modal
+                        polite_sleep(0.3)  # Wait for modal
                         clicked_delete_image = True
                         break
                 except Exception:
@@ -782,7 +782,7 @@ def delete_one(page, href, dry_run, username=None):
                 try:
                     delete_btn = page.get_by_role("menuitem", name=re.compile("Delete image", re.I)).first
                     if safe_click(page, delete_btn, "'Delete image' button (menuitem role)", dry_run, timeout=1500):
-                        polite_sleep(1.0)
+                        polite_sleep(0.3)
                         clicked_delete_image = True
                 except Exception:
                     pass
@@ -810,7 +810,7 @@ def delete_one(page, href, dry_run, username=None):
                             print(f" [DRY-RUN] {GRN}✓ Clicking 'Delete from account'{RESET}")
                         else:
                             print(f" {GRN}✓ Clicking 'Delete from account'{RESET}")
-                        polite_sleep(1.0)
+                        polite_sleep(0.3)
                         deleted = True
                         break
                 except Exception:
@@ -824,7 +824,7 @@ def delete_one(page, href, dry_run, username=None):
                             print(f" [DRY-RUN] {GRN}✓ Clicking 'Delete from account' via role{RESET}")
                         else:
                             print(f" {GRN}✓ Clicking 'Delete from account' via role{RESET}")
-                        polite_sleep(1.0)
+                        polite_sleep(0.3)
                         deleted = True
                 except Exception:
                     print(f" {YEL}⚠ Could not find 'Delete from account' button in modal{RESET}")
@@ -837,7 +837,7 @@ def delete_one(page, href, dry_run, username=None):
         return False, 0
     
     # Wait for confirmation dialog/modal to appear
-    polite_sleep(0.8)
+    polite_sleep(0.3)
     
     # Strategy 2: Confirm deletion
     confirm_selectors = [
@@ -854,7 +854,7 @@ def delete_one(page, href, dry_run, username=None):
         try:
             cbtn = page.locator(selector).first
             if safe_click(page, cbtn, f"confirmation button ({selector})", dry_run):
-                polite_sleep(1.0)  # Wait for deletion to process
+                polite_sleep(0.3)  # Wait for deletion to process
                 confirmed = True
                 break
         except Exception:
@@ -875,7 +875,7 @@ def delete_one(page, href, dry_run, username=None):
     if not confirmed:
         # Maybe it deleted on first click, or confirmation wasn't needed
         # Wait and check if deletion succeeded
-        polite_sleep(2.0)
+        polite_sleep(0.6)
         current_url = page.url
         
         # Check for error/success indicators in page content
@@ -898,10 +898,10 @@ def delete_one(page, href, dry_run, username=None):
     
     # Final verification: try to navigate back to the URL and see if it still exists
     if confirmed or deleted:
-        polite_sleep(1.5)  # Give deletion time to process
+        polite_sleep(0.4)  # Give deletion time to process
         try:
             page.goto(url, wait_until="domcontentloaded", timeout=5000)
-            polite_sleep(0.5)
+            polite_sleep(0.3)
             content_lower = page.content().lower()
             # If we see 404 or "not found", it's deleted
             if "404" in content_lower or "not found" in content_lower or "page doesn't exist" in content_lower:
@@ -979,7 +979,7 @@ def main():
                             break
                         seen_heights.add(last_h)
                         page.evaluate("() => window.scrollTo(0, document.body.scrollHeight)")
-                        polite_sleep(1.2)
+                        polite_sleep(0.8)  # Give content time to load after scrolling
                         continue
 
                     for href, x, y in links:
@@ -1000,7 +1000,7 @@ def main():
                             processed += 1  # Count attempt even if failed
                             print(f" -> {YEL}Failed{RESET} (total attempts: {processed})")
 
-                        polite_sleep(0.3)
+                        polite_sleep(0.1)
 
                         # Always return to grid and ensure All tab; go back to top for stable order
                         go_to_posts_all(page, username)
@@ -1016,7 +1016,7 @@ def main():
                         break
                     seen_heights.add(last_h)
                     page.evaluate("() => window.scrollTo(0, document.body.scrollHeight)")
-                    polite_sleep(0.6)
+                    polite_sleep(0.8)  # Give content time to load after scrolling
 
                 print(f"\n{GRN}✅ Done. {'Simulated' if dry_run else 'Actual'} items processed: {processed}{RESET}")
 
