@@ -581,12 +581,16 @@ def delete_one(page, href, dry_run, username=None):
         # Step 1: Click the "Delete image" button (role-based, as per codegen)
         try:
             delete_btn = page.get_by_role("button", name="Delete image").first
+            # Wait for button to become visible, with retry
             if not delete_btn.is_visible(timeout=3000):
-                if dry_run:
-                    print(f" [DRY-RUN] {YEL}⚠ 'Delete image' button not visible{RESET}")
-                else:
-                    print(f" {YEL}⚠ 'Delete image' button not visible{RESET}")
-                return False, 0
+                # Retry once after a brief wait - page might still be loading
+                polite_sleep(0.5)
+                if not delete_btn.is_visible(timeout=2000):
+                    if dry_run:
+                        print(f" [DRY-RUN] {YEL}⚠ 'Delete image' button not visible{RESET}")
+                    else:
+                        print(f" {YEL}⚠ 'Delete image' button not visible{RESET}")
+                    return False, 0
             
             if dry_run:
                 # In dry-run, actually click to open modal
