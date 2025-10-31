@@ -378,6 +378,9 @@ BAD_PREFIXES = (
 def polite_sleep(sec: float):
     time.sleep(sec)
 
+# Default config values (used if not running interactively)
+SETTLE_DELAY = 0.8        # seconds to let SPA settle after nav
+
 def safe_goto(page, url, timeout_ms=30000):
     """Navigate robustly without relying on 'networkidle' (SPAs rarely idle)."""
     try:
@@ -497,56 +500,56 @@ def find_and_hover_image_container(page, dry_run):
     Find the image container and hover over it to reveal the three dots menu.
     Returns the image container locator if found, None otherwise.
     """
-                    image_container = None
-                    try:
-                        # Try finding the actual image element first
-                        try:
-                            image_container = page.locator('img[src*="imgur"]').first
-                            if not image_container.is_visible(timeout=500):
-                                image_container = None
-                        except Exception:
-                            image_container = None
-                        
-                        # If no image found, try to find container by finding parent of three dots location
-                        if not image_container:
-                            try:
-                                # The three dots are usually in a container with the image
-                                # Try finding containers that might contain images
-                                containers = page.locator('[class*="Image"], [class*="image"], [class*="Post-content"], [class*="post-content"]').first
-                                if containers.is_visible(timeout=500):
-                                    image_container = containers
-                            except Exception:
-                                pass
-                        
-                        # Last resort: try finding by image grid items
-                        if not image_container:
-                            try:
-                                # Look for grid items that contain images
-                                grid_items = page.locator('[class*="grid"], [class*="Grid"], [class*="item"]').first
-                                if grid_items.is_visible(timeout=500):
-                                    image_container = grid_items
-                    except Exception:
-                        pass
-                    
-                    # Hover over the image container to make three dots visible
-                    if image_container:
-                        try:
-                            if not dry_run:
-                    # Scroll into view first to handle window movement, then hover
-                                image_container.scroll_into_view_if_needed(timeout=2000)
-                    polite_sleep(0.5)  # Wait a bit before hover to ensure scroll completes
-                                image_container.hover(timeout=2000)
-                    polite_sleep(1.0)  # Wait for hover effect to reveal three dots
-                            else:
-                                print(f" [DRY-RUN] Would hover over image to reveal three dots menu")
-                return image_container
-                        except Exception as e:
-                            if not dry_run:
-                                print(f" {YEL}⚠ Could not hover: {e} (will try clicking anyway){RESET}")
-                return image_container  # Return container even if hover failed
-                                except Exception:
-                                    pass
-                            
+    image_container = None
+    try:
+        # Try finding the actual image element first
+        try:
+            image_container = page.locator('img[src*="imgur"]').first
+            if not image_container.is_visible(timeout=500):
+                image_container = None
+        except Exception:
+            image_container = None
+        
+        # If no image found, try to find container by finding parent of three dots location
+        if not image_container:
+            try:
+                # The three dots are usually in a container with the image
+                # Try finding containers that might contain images
+                containers = page.locator('[class*="Image"], [class*="image"], [class*="Post-content"], [class*="post-content"]').first
+                if containers.is_visible(timeout=500):
+                    image_container = containers
+            except Exception:
+                pass
+        
+        # Last resort: try finding by image grid items
+        if not image_container:
+            try:
+                # Look for grid items that contain images
+                grid_items = page.locator('[class*="grid"], [class*="Grid"], [class*="item"]').first
+                if grid_items.is_visible(timeout=500):
+                    image_container = grid_items
+            except Exception:
+                pass
+    except Exception:
+        pass
+    
+    # Hover over the image container to make three dots visible
+    if image_container:
+        try:
+            if not dry_run:
+                # Scroll into view first to handle window movement, then hover
+                image_container.scroll_into_view_if_needed(timeout=2000)
+                polite_sleep(0.5)  # Wait a bit before hover to ensure scroll completes
+                image_container.hover(timeout=2000)
+                polite_sleep(1.0)  # Wait for hover effect to reveal three dots
+            else:
+                print(f" [DRY-RUN] Would hover over image to reveal three dots menu")
+            return image_container
+        except Exception as e:
+            if not dry_run:
+                print(f" {YEL}⚠ Could not hover: {e} (will try clicking anyway){RESET}")
+            return image_container  # Return container even if hover failed
+    
     return None
 
 def delete_post_container(page, dry_run):
@@ -556,70 +559,70 @@ def delete_post_container(page, dry_run):
     """
     polite_sleep(1.0)  # Wait for page to settle
     
-                delete_post_clicked = False
-                
-                # Try multiple selectors for the delete post button
-                delete_post_selectors = [
-                    'button:has-text("Delete post")',
-                    'text="Delete post"',
-                    '[role="button"]:has-text("Delete post")',
-                    'button[aria-label*="Delete post" i]',
-                    'a:has-text("Delete post")',
-                    '*:has-text("Delete post"):visible',
-                ]
-                
-                for selector in delete_post_selectors:
-                    try:
-                        delete_post_btn = page.locator(selector).first
-                        if safe_click(page, delete_post_btn, f"'Delete post' button ({selector})", dry_run):
-                            if not dry_run:
+    delete_post_clicked = False
+    
+    # Try multiple selectors for the delete post button
+    delete_post_selectors = [
+        'button:has-text("Delete post")',
+        'text="Delete post"',
+        '[role="button"]:has-text("Delete post")',
+        'button[aria-label*="Delete post" i]',
+        'a:has-text("Delete post")',
+        '*:has-text("Delete post"):visible',
+    ]
+    
+    for selector in delete_post_selectors:
+        try:
+            delete_post_btn = page.locator(selector).first
+            if safe_click(page, delete_post_btn, f"'Delete post' button ({selector})", dry_run):
+                if not dry_run:
                     print(f" {GRN}✓ Found and clicked 'Delete post' button{RESET}")
-                                        polite_sleep(1.0)
-                                        delete_post_clicked = True
-                                        break
-                    except Exception:
-                        continue
-                
-                # Also try role-based
-                if not delete_post_clicked:
-                    try:
-                        delete_post_btn = page.get_by_role("button", name=re.compile("Delete post", re.I)).first
-                        if safe_click(page, delete_post_btn, "'Delete post' button (role-based)", dry_run):
-                            if not dry_run:
-                                print(f" {GRN}✓ Found and clicked 'Delete post' button (role-based){RESET}")
-                                        polite_sleep(1.0)
-                                        delete_post_clicked = True
-                    except Exception:
-                        pass
-                
-                if delete_post_clicked:
+                    polite_sleep(1.0)
+                    delete_post_clicked = True
+                    break
+        except Exception:
+            continue
+    
+    # Also try role-based
+    if not delete_post_clicked:
+        try:
+            delete_post_btn = page.get_by_role("button", name=re.compile("Delete post", re.I)).first
+            if safe_click(page, delete_post_btn, "'Delete post' button (role-based)", dry_run):
+                if not dry_run:
+                    print(f" {GRN}✓ Found and clicked 'Delete post' button (role-based){RESET}")
+                    polite_sleep(1.0)
+                    delete_post_clicked = True
+        except Exception:
+            pass
+    
+    if delete_post_clicked:
         # Wait for modal to appear
-                    polite_sleep(1.5)
-                    
+        polite_sleep(1.5)
+        
         # Look for confirmation button in modal
-                    confirmation_clicked = False
-                        confirmation_selectors = [
-                            ('role', 'button', 'Delete Post Only'),
-                            ('role', 'button', 'Delete Post'),
-                            ('selector', 'button:has-text("Delete Post Only")'),
-                            ('selector', 'button:has-text("Delete Post")'),
-                        ]
-                        
-                        for selector_type, *args in confirmation_selectors:
-                            try:
-                                if selector_type == 'role':
-                                    btn = page.get_by_role('button', name=args[0]).first
-                                else:  # selector
-                                    btn = page.locator(args[0]).first
-                                
-                                if safe_click(page, btn, f"'{args[0]}' button in modal", dry_run):
-                                    confirmation_clicked = True
-                                    if not dry_run:
+        confirmation_clicked = False
+        confirmation_selectors = [
+            ('role', 'button', 'Delete Post Only'),
+            ('role', 'button', 'Delete Post'),
+            ('selector', 'button:has-text("Delete Post Only")'),
+            ('selector', 'button:has-text("Delete Post")'),
+        ]
+        
+        for selector_type, *args in confirmation_selectors:
+            try:
+                if selector_type == 'role':
+                    btn = page.get_by_role('button', name=args[0]).first
+                else:  # selector
+                    btn = page.locator(args[0]).first
+                
+                if safe_click(page, btn, f"'{args[0]}' button in modal", dry_run):
+                    confirmation_clicked = True
+                    if not dry_run:
                         print(f" {GRN}✓ Deleted post/album{RESET}")
-                                    polite_sleep(1.0)
-                                    break
-                            except Exception:
-                                continue
+                    polite_sleep(1.0)
+                    break
+            except Exception:
+                continue
         
         return confirmation_clicked or delete_post_clicked  # Return True if any action succeeded
     
@@ -937,9 +940,6 @@ def delete_one(page, href, dry_run, username=None):
         return True, 1  # Single image/post deletion = 1 item
     else:
         return False, 0
-
-# Default config values (used if not running interactively)
-SETTLE_DELAY = 0.8        # seconds to let SPA settle after nav
 
 def main():
     try:
