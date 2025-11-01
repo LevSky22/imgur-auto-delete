@@ -1,5 +1,7 @@
 # 🗑️ Imgur Bulk Deletion Tool
 
+![Imgur Bulk Deletion Tool](social.png)
+
 > A cross-platform Python tool for bulk deleting Imgur posts with interactive setup and dry-run support. Free, open-source alternative to paid deletion services.
 
 ## ✨ Why This Exists
