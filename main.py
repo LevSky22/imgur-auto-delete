@@ -344,6 +344,89 @@ def interactive_setup():
     
     return username, storage_file, dry_run, max_items, headless
 
+def validate_session(page, username):
+    """
+    Check if the session is still valid by attempting to access the user's posts page.
+    Returns True if session is valid, False if expired/invalid.
+    """
+    try:
+        # Try to access the user's posts page
+        posts_url = get_posts_url(username)
+        page.goto(posts_url, wait_until="domcontentloaded", timeout=15000)
+        polite_sleep(0.5)
+        
+        # Check if we're redirected to signin (session expired)
+        current_url = page.url.lower()
+        if "signin" in current_url or "login" in current_url:
+            return False
+        
+        # Check page content for auth indicators
+        content = page.content().lower()
+        if "sign in" in content and "sign up" in content and username.lower() not in content:
+            return False
+        
+        # Check if we can see the posts tab/all tab (indicates we're logged in)
+        try:
+            # Look for tabs that indicate we're on a logged-in user page
+            tabs = page.locator('[role="tab"], button:has-text("All"), button:has-text("Public"), button:has-text("Hidden")')
+            if tabs.count() > 0:
+                return True
+        except Exception:
+            pass
+        
+        # If we're on the user's posts page (URL contains username), assume valid
+        if username.lower() in current_url:
+            return True
+        
+        return False
+    except Exception as e:
+        # If we get an error, assume session might be invalid
+        return False
+
+def detect_auth_failure(page):
+    """
+    Detect if we've been logged out or redirected due to auth failure.
+    Returns True if auth failure detected, False otherwise.
+    """
+    try:
+        current_url = page.url.lower()
+        if "signin" in current_url or "login" in current_url:
+            return True
+        
+        content = page.content().lower()
+        # Check for common auth failure indicators
+        auth_indicators = [
+            "please sign in",
+            "sign in to continue",
+            "you must be logged in",
+            "session expired",
+            "please log in"
+        ]
+        for indicator in auth_indicators:
+            if indicator in content:
+                return True
+        return False
+    except Exception:
+        return False
+
+def relogin_and_update_session(storage_file):
+    """
+    Handle re-login when session expires.
+    Note: This will open a new browser window for login.
+    Returns True if re-login successful, False otherwise.
+    """
+    print(f"\n{YEL}⚠️  Session expired or invalid.{RESET}")
+    print(f"{BLU}Need to re-authenticate...{RESET}\n")
+    print(f"{BLU}Note: A browser window will open for you to log in.{RESET}\n")
+    
+    # Perform login (this creates its own browser context)
+    if do_login(storage_file):
+        print(f"{GRN}✓ Re-login successful. Session updated.{RESET}\n")
+        return True
+    else:
+        print(f"{RED}✗ Re-login failed or cancelled.{RESET}\n")
+        return False
+
 def print_banner(username, dry_run, max_to_process, headless):
     """Print execution banner."""
     mode = f"{YEL}🧪 DRY RUN ENABLED{RESET}" if dry_run else f"{RED}🗑️  DELETION MODE (IRREVERSIBLE){RESET}"
@@ -970,7 +1053,52 @@ def main():
             seen_heights = set()
 
             try:
+                # Validate session at startup
+                print(f"{BLU}Validating session...{RESET}")
+                if not validate_session(page, username):
+                    print(f"{YEL}⚠️  Initial session validation failed.{RESET}")
+                    # Close current context before re-login
+                    try:
+                        context.close()
+                    except Exception:
+                        pass
+                    if not relogin_and_update_session(storage_file):
+                        raise SystemExit(f"{RED}Could not re-authenticate. Exiting.{RESET}")
+                    # Recreate context with updated storage state
+                    context = browser.new_context(
+                        storage_state=storage_file,
+                        viewport={"width": 1920, "height": 1080},
+                        user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+                    )
+                    page = context.new_page()
+                    # Re-validate after re-login
+                    if not validate_session(page, username):
+                        raise SystemExit(f"{RED}Session still invalid after re-login. Exiting.{RESET}")
+                    print(f"{GRN}✓ Session validated after re-login.{RESET}\n")
+                else:
+                    print(f"{GRN}✓ Session validated.{RESET}\n")
+                
                 go_to_posts_all(page, username)
+                
+                # Double-check we're still logged in after navigation
+                if detect_auth_failure(page):
+                    print(f"{YEL}⚠️  Session expired after initial navigation.{RESET}")
+                    # Close current context before re-login
+                    try:
+                        context.close()
+                    except Exception:
+                        pass
+                    if not relogin_and_update_session(storage_file):
+                        raise SystemExit(f"{RED}Could not re-authenticate. Exiting.{RESET}")
+                    # Recreate context with updated storage state
+                    context = browser.new_context(
+                        storage_state=storage_file,
+                        viewport={"width": 1920, "height": 1080},
+                        user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+                    )
+                    page = context.new_page()
+                    go_to_posts_all(page, username)
+                
                 scroll_to_top(page)
 
                 while processed < max_to_process:
@@ -1008,12 +1136,58 @@ def main():
 
                         # Always return to grid and ensure All tab; go back to top for stable order
                         go_to_posts_all(page, username)
-                        scroll_to_top(page)
+                        
+                        # Check for auth failures after navigation
+                        if detect_auth_failure(page):
+                            print(f"\n{YEL}⚠️  Session expired during execution.{RESET}")
+                            # Close current context before re-login
+                            try:
+                                context.close()
+                            except Exception:
+                                pass
+                            if not relogin_and_update_session(storage_file):
+                                print(f"{RED}Could not re-authenticate. Stopping execution.{RESET}")
+                                break
+                            # Recreate context with updated storage state
+                            context = browser.new_context(
+                                storage_state=storage_file,
+                                viewport={"width": 1920, "height": 1080},
+                                user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+                            )
+                            page = context.new_page()
+                            go_to_posts_all(page, username)
+                            scroll_to_top(page)
+                            print(f"{GRN}✓ Resumed execution with fresh session.{RESET}\n")
+                        else:
+                            scroll_to_top(page)
 
                         if processed >= max_to_process:
                             break
 
                     # Attempt to pull more items for the next pass
+                    # Check for auth failure before scrolling
+                    if detect_auth_failure(page):
+                        print(f"\n{YEL}⚠️  Session expired during execution.{RESET}")
+                        # Close current context before re-login
+                        try:
+                            context.close()
+                        except Exception:
+                            pass
+                        if not relogin_and_update_session(storage_file):
+                            print(f"{RED}Could not re-authenticate. Stopping execution.{RESET}")
+                            break
+                        # Recreate context with updated storage state
+                        context = browser.new_context(
+                            storage_state=storage_file,
+                            viewport={"width": 1920, "height": 1080},
+                            user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+                        )
+                        page = context.new_page()
+                        go_to_posts_all(page, username)
+                        scroll_to_top(page)
+                        print(f"{GRN}✓ Resumed execution with fresh session.{RESET}\n")
+                        continue  # Skip scrolling, go back to find links
+                    
                     last_h = page.evaluate("() => document.body.scrollHeight")
                     if last_h in seen_heights:
                         print("No further content loaded. Finished.")
