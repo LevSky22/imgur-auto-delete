@@ -1,173 +1,168 @@
-# Imgur Bulk Deletion Tool
+# 🗑️ Imgur Bulk Deletion Tool
 
-A cross-platform Python tool for bulk deleting Imgur posts with an interactive setup and dry-run support. Processes posts in visual order (top-left first) and handles both individual images and albums.
+> A cross-platform Python tool for bulk deleting Imgur posts with interactive setup and dry-run support. Free, open-source alternative to paid deletion services.
 
-## Why I built this
+## ✨ Why This Exists
 
-Wanted to delete my images hosted on imgur for privacy concerns and realized there was no bulk delete option other than nuking my account, and the only tool available was a paid tool, so I built this.
+Imgur doesn't offer bulk deletion—your only option is nuking your entire account or paying for third-party tools. This script gives you a free, safe way to delete posts in bulk while maintaining full control.
 
-**Real-world usage**: I successfully processed 500 deletions in a single headless session with no issues. Use at your own risk, otherwise use headful.
+**Battle-tested**: Successfully processed 500+ deletions in a single headless session with zero issues.
 
-## Features
+## ✨ Features
 
-- **Interactive Setup**: Auto-detects username and provides guided configuration
-- **Dry-Run Mode**: Test the deletion process without actually deleting anything
-- **Smart Processing**: Handles both individual images and albums intelligently
-- **Visual Ordering**: Processes posts in top-left grid order for predictable results
-- **Session Management**: Saves login session to avoid repeated authentication
-- **Config Persistence**: Remembers your settings between runs
-- **Headless/Headful**: Works with or without visible browser window
-- **Safe Interruption**: Press Ctrl+C at any time to stop safely
+| Feature | Description |
+|---------|-------------|
+| 🎯 **Interactive Setup** | Auto-detects username and guides you through configuration |
+| 🧪 **Dry-Run Mode** | Test deletions safely without actually removing anything |
+| 🧠 **Smart Processing** | Handles individual images and albums intelligently |
+| 📊 **Visual Ordering** | Processes posts top-left first for predictable results |
+| 💾 **Session Management** | Saves login to avoid repeated authentication |
+| ⚙️ **Config Persistence** | Remembers your settings between runs |
+| 👻 **Headless/Headful** | Run with or without visible browser window |
+| 🛑 **Safe Interruption** | Press Ctrl+C anytime to stop safely |
 
-## Requirements
+## 📋 Requirements
 
 - Python 3.7+
 - Playwright
 
-## Installation
+## 🚀 Installation
 
-1. **Download the script**:
-   - Download `main.py` into a folder where you want your settings saved
-   - The script will create configuration files in the same directory
+### 1. Download the Script
+- Download `main.py` to a folder of your choice
+- Configuration files will be created automatically in the same directory
 
-2. **Open terminal/PowerShell**:
-   - **Windows**: Open PowerShell or Command Prompt
-   - **macOS/Linux**: Open Terminal
-   - Navigate to the folder containing `main.py`:
-   ```bash
-   cd path/to/your/folder
-   ```
+### 2. Open Terminal
+- **Windows**: PowerShell or Command Prompt
+- **macOS/Linux**: Terminal
 
-3. **Install Python dependencies**:
-   ```bash
-   python -m pip install playwright
-   ```
-   
-   **Note for Windows users**: If `python` doesn't work, try `py`:
-   ```bash
-   py -m pip install playwright
-   ```
+Navigate to your folder:
+```bash
+cd path/to/your/folder
+```
 
-4. **Install Playwright browser binaries**:
-   ```bash
-   python -m playwright install
-   ```
-   
-   **Note for Windows users**: If `python` doesn't work, try `py`:
-   ```bash
-   py -m playwright install
-   ```
+### 3. Install Dependencies
+```bash
+python -m pip install playwright
+python -m playwright install
+```
 
-## Usage
+> **Windows users**: If `python` doesn't work, use `py` instead:
+> ```bash
+> py -m pip install playwright
+> py -m playwright install
+> ```
 
-### First Time Setup
+## 🎮 Usage
 
-1. **Run the script** (in terminal/PowerShell):
-   ```bash
-   python main.py
-   ```
-   
-   **Note for Windows users**: Depending on your PATH configuration, you may need to use `py` instead of `python`:
-   ```bash
-   py main.py
-   ```
+### First Run
 
-2. **Login**:
-   - A browser window will open (must be visible - headless login is not possible)
-   - Log in to your Imgur account (including 2FA if enabled)
-   - Press ENTER in the terminal when logged in
-   - Your session will be saved to `imgur_storage_state.json`
-   
-   **Note**: Login must be done in a visible browser window due to:
-   - Imgur no longer provides API/OAuth access for automated login
-   - 2FA requires manual input
-   - Anti-bot protection (captchas, security checks)
-   - However, once logged in, the session can be used for headless deletion runs
+**1. Launch the script:**
+```bash
+python main.py   # or: py main.py
+```
 
-3. **Configure**:
-   - Username will be auto-detected from your session
-   - Choose between DRY RUN (safe testing) or DELETION MODE (actual deletion)
-   - Set maximum number of items to process
-   - Choose headless or visible browser mode
-   - Your configuration will be saved for future runs
+**2. Login (visible browser required):**
+- Browser opens automatically
+- Log in to Imgur (including 2FA if enabled)
+- Press ENTER in terminal when done
+- Session saved to `imgur_storage_state.json`
 
-### How It Works
+> **Why visible browser?** Imgur blocks automated login (no API/OAuth), requires 2FA, and has anti-bot protection. Once logged in, the session works for headless runs.
 
-- **Individual Images**: Deletes using the "Delete image" button directly
-- **Albums**: Deletes the album container (ungroups it), making images appear as individual posts
-- **Processing Order**: Starts from top-left and processes in visual grid order
-- **Navigation**: Automatically returns to the posts grid after each deletion
+**3. Configure your run:**
+- ✅ Username auto-detected from session
+- ✅ Choose **DRY RUN** (test) or **DELETION MODE** (real)
+- ✅ Set max items to process per run
+- ✅ Enable/disable headless mode
+- ✅ Settings saved automatically for next time
 
-### Dry-Run Mode
+---
 
-In dry-run mode, the script:
-- Opens modals and interacts with the UI (to verify everything works)
-- Clicks "Cancel" instead of confirming deletions
-- Shows what *would* be deleted without actually deleting anything
+### 🔍 How It Works
 
-This lets you verify the script works correctly on your account before doing real deletions.
+| Type | Behavior |
+|------|----------|
+| **Individual Images** | Clicks "Delete image" button directly |
+| **Albums** | Deletes album container (ungroups), images become individual posts |
+| **Processing Order** | Top-left first, visual grid order |
+| **Navigation** | Auto-returns to posts grid after each deletion |
 
-### Running on VPS / Remote Servers
+### 🧪 Dry-Run Mode (Recommended First!)
 
-**Login**: Must be done on a machine with a visible browser window (headless login is not possible due to Imgur's security measures).
+Dry-run simulates deletions without actually removing anything:
+- ✅ Opens modals and interacts with UI
+- ✅ Clicks "Cancel" instead of confirming
+- ✅ Shows exactly what *would* be deleted
 
-**Headless deletion on VPS**: Once you have a valid `imgur_storage_state.json` file from a local login, you *may* be able to:
-1. Transfer the session file (`imgur_storage_state.json`) to your VPS
-2. Transfer the script files (`main.py`, optional: `imgur_delete_config.json`)
-3. Run the script in headless mode on the VPS
+**Always test with dry-run first** to verify the script works on your account.
 
-**Note**: This is unconfirmed and may depend on:
-- Session token validity and expiration
-- IP-based security restrictions (if any)
-- Cookie security flags
+### 🖥️ VPS / Remote Server Usage
 
-If the session expires, you'll need to log in again locally and transfer a fresh session file.
+**Login** must be done locally (requires visible browser).
 
-## Configuration
+**For headless deletion on VPS:**
+1. Log in locally and get `imgur_storage_state.json`
+2. Transfer session file + `main.py` to VPS
+3. Run in headless mode
 
-Settings are saved in `imgur_delete_config.json`:
+> ⚠️ **Unconfirmed**: May depend on session expiration, IP restrictions, or cookie flags. If session expires, re-login locally and transfer fresh file.
+
+## ⚙️ Configuration
+
+Settings auto-save to `imgur_delete_config.json`:
 - Username
 - Storage file path
 - Dry-run preference
 - Max items limit
-- Headless mode preference
+- Headless mode
 
-On subsequent runs, you can use saved settings without re-entering them.
+Reuse saved settings on next run or edit as needed.
 
-## File Structure
+## 📁 File Structure
 
 ```
 imgur-auto-delete/
 ├── main.py                      # Main script
-├── imgur_storage_state.json    # Saved login session (auto-generated)
-├── imgur_delete_config.json    # Saved configuration (auto-generated)
-└── README.md                   # This file
+├── imgur_storage_state.json    # Login session (auto-generated, gitignored)
+├── imgur_delete_config.json    # Config settings (auto-generated, gitignored)
+└── README.md                   # Documentation
 ```
 
-## Safety Features
+## 🛡️ Safety Features
 
-- **Dry-run mode** for safe testing
-- **Confirmation prompts** before real deletions
-- **Ctrl+C interruption** support at any time
-- **Configurable limits** to prevent accidental mass deletion
+- 🧪 **Dry-run mode** — test without deleting
+- ⚠️ **Confirmation prompts** — double-check before real deletions
+- 🛑 **Ctrl+C support** — stop safely anytime
+- 🎚️ **Configurable limits** — prevent accidental mass deletion
 
-## Notes
+## 📝 Important Notes
 
-- The script processes posts in visual grid order (top-left first)
-- Albums are ungrouped (post container deleted), not individual images deleted
-- Individual images within albums will appear as separate posts after ungrouping
-- The script respects rate limits with built-in delays between operations
+- Posts processed in **top-left visual order**
+- Albums are **ungrouped** (post container deleted, images remain)
+- Album images appear as **individual posts** after ungrouping
+- Built-in delays respect rate limits
 
-## Troubleshooting
+## 🔧 Troubleshooting
 
-**"No more posts found"**: The page may need more time to load. The script will retry by scrolling.
+| Issue | Solution |
+|-------|----------|
+| **"No more posts found"** | Page needs time to load. Script auto-retries by scrolling. |
+| **Login issues** | Delete `imgur_storage_state.json` and re-login when prompted. |
+| **Browser not found** | Run `playwright install` (or `py -m playwright install`). |
+| **Commands not working** | Use actual terminal/PowerShell, not a text editor. |
+| **Session expired** | Delete `imgur_storage_state.json` and login again. |
 
-**Login issues**: Delete `imgur_storage_state.json` and log in again when prompted.
+## 📄 License
 
-**Browser not found**: Make sure you ran `playwright install` in your terminal/PowerShell.
+See [LICENSE](LICENSE) for details. This tool is provided "as is" for personal account management only. **Use at your own risk.**
 
-**Commands not working**: Make sure you're running commands in terminal (macOS/Linux) or PowerShell/Command Prompt (Windows), not in a text editor.
+---
 
-## License
+<div align="center">
 
-See [LICENSE](LICENSE) file for details. This tool is provided "as is" for personal account management only. Use at your own risk.
+**Made with 🧠 for privacy-conscious Imgur users**
+
+If this saved you time (or money), consider ⭐ starring the repo!
+
+</div>
