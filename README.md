@@ -2,8 +2,11 @@
 
 A cross-platform Python tool for bulk deleting Imgur posts with an interactive setup and dry-run support. Processes posts in visual order (top-left first) and handles both individual images and albums.
 
-- **Real-world usage**: I successfully processed 500 deletions in a single headless session with no issues
+## Why I built this
 
+Wanted to delete my images hosted on imgur for privacy concerns and realized there was no bulk delete option other than nuking my account, and the only tool available was a paid tool, so I built this.
+
+**Real-world usage**: I successfully processed 500 deletions in a single headless session with no issues. Use at your own risk, otherwise use headful.
 
 ## Features
 
@@ -168,4 +171,3 @@ imgur-auto-delete/
 ## License
 
 See [LICENSE](LICENSE) file for details. This tool is provided "as is" for personal account management only. Use at your own risk.
-
